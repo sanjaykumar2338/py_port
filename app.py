@@ -15,7 +15,8 @@ app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = ''
 app.config['MYSQL_DB'] = 'pythonlogin'
- 
+app.run(debug=True)
+
 mysql = MySQL(app)
  
 @app.route('/')
@@ -41,6 +42,11 @@ def login():
 def dashboard():
     msg = 'Logged in successfully !'
     return render_template('dashboard.html', msg = msg)
+
+@app.route('/my_ips') 
+def my_ips():
+    msg = 'My IP list'
+    return render_template('ip_list.html', msg = msg)
 
 @app.route('/logout')
 def logout():
