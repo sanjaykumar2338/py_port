@@ -4,8 +4,9 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
 import re
- 
- 
+import shodan 
+from datetime import datetime
+
 app = Flask(__name__)
  
  
@@ -14,10 +15,13 @@ app.secret_key = 'your secret key'
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = ''
-app.config['MYSQL_DB'] = 'pythonlogin'
+app.config['MYSQL_DB'] = 'ip_port'
 app.run(debug=True)
 
 mysql = MySQL(app)
+
+SHODAN_API_KEY = "KZdfqujx50kc00BZ4CFtKgzgB9oPQYCm"
+api = shodan.Shodan(SHODAN_API_KEY)
  
 @app.route('/')
 @app.route('/login', methods =['GET', 'POST'])
@@ -33,7 +37,7 @@ def login():
             session['loggedin'] = True
             session['id'] = account['id']
             session['username'] = account['username']
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('my_ips'))
         else:
             msg = 'Incorrect username / password !'
     return render_template('login.html', msg = msg)
@@ -46,7 +50,42 @@ def dashboard():
 @app.route('/my_ips') 
 def my_ips():
     msg = 'My IP list'
-    return render_template('ip_list.html', msg = msg)
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM ip')
+    ips = cursor.fetchall()
+    #print(account)
+    return render_template('ip_list.html', ips = ips)
+
+@app.route('/add_my_ip') 
+def add_my_ip():
+    msg = 'My IP list'
+    return render_template('add_my_ip.html', msg = msg)
+
+@app.route('/save_my_ip', methods =['POST'])
+def save_my_ip():
+    ip = request.form['ip']
+    user_id = session['id']
+    port = '' 
+    last_scanned = datetime.now()
+    created_at = datetime.now()
+    updated_at = datetime.now()
+    msg = ''
+    try:           
+        host = api.host(ip)            
+        ports = host.get('ports', [])
+        if len(ports) == 0:
+            port = ''#writer.writerow([ip, "No open ports"])
+        else:
+            port = ",".join(str(port) for port in ports) #writer.writerow([ip, ",".join(str(port) for port in ports)])
+    except shodan.APIError as e:
+        port = 'Error: {}'.format(e) #print('Error: {}'.format(e))
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('INSERT INTO ip VALUES (NULL, % s, % s, % s, % s, % s, % s)', (ip, user_id, port, last_scanned, created_at, updated_at))
+    mysql.connection.commit()
+    message = 'Ip added successfully'
+    return redirect(url_for('my_ips', message=message))
 
 @app.route('/logout')
 def logout():
