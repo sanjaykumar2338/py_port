@@ -19,16 +19,24 @@
         <div class="sidebar">
            <div class="profile">
                 <img style="display:none;" src="https://1.bp.blogspot.com/-vhmWFWO2r8U/YLjr2A57toI/AAAAAAAACO4/0GBonlEZPmAiQW4uvkCTm5LvlJVd_-l_wCNcBGAsYHQ/s16000/team-1-2.jpg" alt="profile_picture">
-                <h3>Hello {{session['username']}},</h3>
+                <h3>Hello {{session['username'].capitalize()}},</h3>
             </div>
 
             <ul>
                 <li>
                     <a href="{{ url_for('my_ips') }}" class="active">
                         <span class="icon"><i class="fas fa-list"></i></span>
-                        <span class="item">My IPs</span>
+                        <span class="item">My IP</span>
                     </a>
                 </li>
+
+                <li>
+                    <a href="{{ url_for('my_ip_history') }}">
+                        <span class="icon"><i class="fas fa-list"></i></span>
+                        <span class="item">My IP History</span>
+                    </a>
+                </li>
+
                 <li>
                     <a href="{{url_for('logout')}}">
                         <span class="icon"><i class="fas fa-sign-out-alt"></i></span>
@@ -47,7 +55,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="header">
           <div class="header-right">
             <a href="{{ url_for('my_ips') }}">IP List(s)</a>
@@ -58,9 +65,23 @@
           </div>
         </div>
 
-        <div class="msg">{{ message }}</div>
+        
 
         <div>
+
+        {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <div class="alert alert-primary" role="alert" style="text-align: center;width: 20%;float: right;margin-top: 10px;">
+                <ul class=flashes>
+                    {% for message in messages %}
+                      <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+                </div>
+              {% endif %}
+        {% endwith %}
+
+
         <table id="example" class="display table" style="width:100%">
         <thead>
             <tr>
@@ -69,6 +90,7 @@
                 <th>Last Scanned</th>
                 <th>Created At</th>
                 <th>Updated At</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -79,6 +101,7 @@
                     <td>{{dict_item['last_scanned']}}</td>
                     <td>{{dict_item['created_at']}}</td>
                     <td>{{dict_item['updated_at']}}</td>
+                    <td><a href="{{ url_for('edit_my_ip') }}?id={{dict_item['id']}}">Edit</a> | <a onclick="return confirm('Are you sure ?')" href="{{ url_for('delete_my_ip') }}?id={{dict_item['id']}}">Delete</a></td>
                 </tr>
             {%endfor%}
         </tbody>
@@ -103,7 +126,7 @@
 
         setTimeout(function(){
             $('.dataTables_wrapper').attr('style', 'position: static !important');
-        },1000)
+        },500)
     </script>
 </body>
 </html>

@@ -23,21 +23,19 @@
             </div>
 
             <ul>
-              
+               
                 <li>
                     <a href="{{ url_for('my_ips') }}" class="active">
                         <span class="icon"><i class="fas fa-list"></i></span>
                         <span class="item">My IPs</span>
                     </a>
                 </li>
-
                 <li>
                     <a href="{{ url_for('my_ip_history') }}">
                         <span class="icon"><i class="fas fa-list"></i></span>
                         <span class="item">My IP History</span>
                     </a>
                 </li>
-
                 <li>
                     <a href="{{url_for('logout')}}">
                         <span class="icon"><i class="fas fa-sign-out-alt"></i></span>
@@ -64,11 +62,12 @@
         </div>
 
         <div class="container" style="width: 885px;">
-          <h2>Add New IP</h2>
-          <form action="{{ url_for('save_my_ip') }}" method="post">
+          <h2>Edit IP</h2>
+          <form action="{{ url_for('update_my_ip') }}" method="post">
             <div class="form-group">
               <label for="ip">IP:</label>
-              <input type="text" required class="form-control" id="ip" placeholder="Enter IP" name="ip" minlength="7" maxlength="15" size="15" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$">
+              <input type="hidden" name="id" value="{{ip['id']}}">
+              <input type="text" value="{{ip['ip']}}" required class="form-control" id="ip" placeholder="Enter IP" name="ip" minlength="7" maxlength="15" size="15" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$">
             </div>
             <button type="submit" class="btn btn-default">Submit</button>
             </form>

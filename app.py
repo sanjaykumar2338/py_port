@@ -1,6 +1,6 @@
 # Store this code in 'app.py' file
  
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, flash, render_template, request, redirect, url_for, session
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
 import re
@@ -57,10 +57,106 @@ def my_ips():
     #print(account)
     return render_template('ip_list.html', ips = ips)
 
+@app.route('/ip_cron_job') 
+def ip_cron_job():
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM ip')
+    ips = cursor.fetchall()
+
+    for dict_item in ips:
+        ip = dict_item['ip']
+        ip_id = dict_item['id']
+        user_id = dict_item['user_id']
+        port = '' 
+        last_scanned = datetime.now()
+        created_at = datetime.now()
+        updated_at = datetime.now()
+       
+        try:           
+            host = api.host(ip)            
+            ports = host.get('ports', [])
+            if len(ports) == 0:
+                port = ''
+            else:
+                port = ",".join(str(port) for port in ports)
+        except shodan.APIError as e:
+            port = 'Error: {}'.format(e)
+
+        cursor.execute('SELECT * FROM history WHERE ip = % s', (ip, ))
+        ip_data = cursor.fetchone()
+
+        if not ip_data:
+            cursor.execute('INSERT INTO history VALUES (NULL, % s, % s, % s, % s, % s, % s, % s)', (user_id, ip_id, ip, port, last_scanned, created_at, updated_at))
+        else:
+            if port != dict_item['port']:
+                #cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+                cursor.execute('INSERT INTO history VALUES (NULL, % s, % s, % s, % s, % s, % s, % s)', (user_id, ip_id, ip, port, last_scanned, created_at, updated_at))
+
+    mysql.connection.commit()
+    return 'done'
+
+@app.route('/my_ip_history') 
+def my_ip_history():
+    user_id = session['id']
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM history WHERE user_id = % s', (user_id, ))
+    ips = cursor.fetchall()
+    #print(account)
+    return render_template('history.html', ips = ips)
+
 @app.route('/add_my_ip') 
 def add_my_ip():
     msg = 'My IP list'
     return render_template('add_my_ip.html', msg = msg)
+
+@app.route('/edit_my_ip') 
+def edit_my_ip():
+    id = request.args.get('id')
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM ip WHERE id = % s', (id, ))
+    mysql.connection.commit()
+    ip = cursor.fetchone()
+    return render_template('edit_my_ip.html',ip=ip)
+
+@app.route('/delete_my_ip') 
+def delete_my_ip():
+    id = request.args.get('id')
+    
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('DELETE FROM ip WHERE id = % s', (id, ))
+    mysql.connection.commit()
+    message = 'IP deleted successfully'
+    flash(message)  
+    return redirect(url_for('my_ips'))
+
+@app.route('/update_my_ip', methods =['POST'])
+def update_my_ip():
+    ip = request.form['ip']
+    id = request.form['id']
+    port = '' 
+    last_scanned = datetime.now()
+    created_at = datetime.now()
+    updated_at = datetime.now()
+    msg = ''
+    try:           
+        host = api.host(ip)            
+        ports = host.get('ports', [])
+        if len(ports) == 0:
+            port = ''#writer.writerow([ip, "No open ports"])
+        else:
+            port = ",".join(str(port) for port in ports) #writer.writerow([ip, ",".join(str(port) for port in ports)])
+    except shodan.APIError as e:
+        port = 'Error: {}'.format(e) #print('Error: {}'.format(e))
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    sql = "UPDATE ip SET ip = %s,port = %s,last_scanned = %s  WHERE id = %s"
+    val = (ip, port, last_scanned, id)
+    cursor.execute(sql,val)
+    mysql.connection.commit()
+    message = 'IP updated successfully'
+    flash(message)  
+    return redirect(url_for('my_ips'))
+
 
 @app.route('/save_my_ip', methods =['POST'])
 def save_my_ip():
@@ -84,8 +180,9 @@ def save_my_ip():
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute('INSERT INTO ip VALUES (NULL, % s, % s, % s, % s, % s, % s)', (ip, user_id, port, last_scanned, created_at, updated_at))
     mysql.connection.commit()
-    message = 'Ip added successfully'
-    return redirect(url_for('my_ips', message=message))
+    message = 'IP added successfully'
+    flash(message)  
+    return redirect(url_for('my_ips'))
 
 @app.route('/logout')
 def logout():
